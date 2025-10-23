@@ -1,0 +1,50 @@
+# ---------------- Twitter Airline Sentiment Cleaning + EDA ----------------
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+tqdm.pandas()
+
+# Load dataset (after upload)
+df = pd.read_csv("/content/Tweets.csv", encoding='utf-8')
+
+print("✅ Original shape:", df.shape)
+display(df.head(3))
+
+# Clean text
+def clean_tweet(text):
+    text = str(text).lower()
+    text = re.sub(r'@[\w]+', '', text)             # remove @mentions
+    text = re.sub(r'http\S+|www\S+', '', text)     # remove URLs
+    text = re.sub(r'[^a-z\s]', '', text)           # remove punctuation/emojis
+    text = re.sub(r'\s+', ' ', text).strip()       # collapse spaces
+    return text
+
+df['clean_text'] = df['text'].progress_apply(clean_tweet)
+
+# Drop empty or duplicate
+df = df[df['clean_text'] != ''].drop_duplicates(subset=['clean_text'])
+print("🧹 Cleaned shape:", df.shape)
+
+# Add word count
+df['word_count'] = df['clean_text'].apply(lambda x: len(x.split()))
+
+# Basic stats
+print("\n📊 Word Count Statistics:")
+display(df['word_count'].describe())
+
+# Sentiment distribution
+plt.figure(figsize=(6,4))
+df['airline_sentiment'].value_counts().plot(kind='bar', color='skyblue')
+plt.title('Sentiment Distribution')
+plt.xlabel('Sentiment')
+plt.ylabel('Tweet Count')
+plt.show()
+
+# Random examples
+print("\n🧩 Random Tweet Samples:")
+display(df.sample(10)[['text', 'clean_text', 'airline_sentiment', 'word_count']])
+
+# Save cleaned version
+df.to_csv("/content/cleaned_twitter_airline.csv", index=False)
+print("\n✅ Cleaned file saved as cleaned_twitter_airline.csv")
