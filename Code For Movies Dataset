@@ -1,0 +1,55 @@
+import kagglehub
+
+# Download latest version
+path = kagglehub.dataset_download("lakshmi25npathi/imdb-dataset-of-50k-movie-reviews")
+
+print("Path to dataset files:", path)
+# ---------------- IMDB Cleaning + EDA ----------------
+import pandas as pd
+import matplotlib.pyplot as plt
+import re
+from tqdm import tqdm
+tqdm.pandas()
+
+# Correct dataset path (use the one downloaded by kagglehub)
+df = pd.read_csv("/kaggle/input/imdb-dataset-of-50k-movie-reviews/IMDB Dataset.csv")
+
+print("✅ Original shape:", df.shape)
+display(df.head())
+
+# Basic cleaning
+def clean_text(text):
+    text = str(text).lower()
+    text = re.sub(r"http\S+|www\S+|https\S+", '', text)  # remove URLs
+    text = re.sub(r'[^a-zA-Z\s]', '', text)              # remove punctuation/numbers
+    text = re.sub(r'\s+', ' ', text).strip()             # collapse spaces
+    return text
+
+df["clean_review"] = df["review"].progress_apply(clean_text)
+
+# Drop duplicates or missing values
+df = df.dropna(subset=["clean_review"]).drop_duplicates(subset=["clean_review"])
+print("🧹 Cleaned shape:", df.shape)
+
+# Add word count column
+df["word_count"] = df["clean_review"].apply(lambda x: len(x.split()))
+
+# Show stats
+print("\n📊 Word count stats:")
+display(df["word_count"].describe())
+
+# Plot histogram
+plt.figure(figsize=(8,4))
+plt.hist(df["word_count"], bins=30)
+plt.title("IMDB Review Word Count Distribution")
+plt.xlabel("Number of Words")
+plt.ylabel("Frequency")
+plt.show()
+
+# Display random examples
+print("\n🧩 Random Cleaned Reviews:")
+display(df.sample(10)[["review", "clean_review", "sentiment", "word_count"]])
+
+# Save cleaned file
+df.to_csv("/content/cleaned_imdb.csv", index=False)
+print("\n✅ Cleaned file saved as cleaned_imdb.csv")
